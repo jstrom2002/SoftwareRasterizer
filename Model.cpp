@@ -22,7 +22,7 @@ namespace SoftwareRasterizer
         bounds[0] = glm::vec3(std::numeric_limits<float>::max());
         bounds[1] = glm::vec3(-std::numeric_limits<float>::max());
         LoadTriangles(filename);
-        wireframeOn = 0;
+        wireframeOn = true;
     }
 
     void Model::LoadTriangles(std::string  filename)
@@ -160,7 +160,7 @@ namespace SoftwareRasterizer
     {
         if (v.x >= -1 && v.x <= 1 &&
             v.y >= -1 && v.y <= 1 &&
-            v.z >= -1 && v.z <= 1)
+            v.z >= 0 && v.z <= 1)
         {
             return true;
         }
@@ -211,13 +211,15 @@ namespace SoftwareRasterizer
                 std::vector<std::vector<cv::Point>> contourVec;
                 for (int n = 0; n < 3; ++n)
                 {
+                    int j = (n + 1) % 3;
+
                     // Transform coordinates to screen space for drawing.
                     Point p1(int((v[n].x + 1) * 0.5 * w), int((v[n].y + 1) * 0.5 * h));
 
                     //// If in wireframe mode, draw lines of triangle edges.
-                    if (wireframeOn && chk[n] && chk[n + 1 % 3])
+                    if (wireframeOn && chk[n] && chk[j])
                     {
-                        Point p2(int((v[n + 1 % 3].x + 1) * 0.5 * w), int((v[n + 1 % 3].y + 1) * 0.5 * h));
+                        Point p2(int((v[j].x + 1) * 0.5 * w), int((v[j].y + 1) * 0.5 * h));
                         Line l(p1, p2);
                         l.draw(img, col, 1U);
                     }
