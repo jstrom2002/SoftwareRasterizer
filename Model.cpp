@@ -11,6 +11,7 @@
 #include <opencv2/highgui.hpp>
 #include <limits>
 #include <ctime>
+#include <stdlib.h>  
 
 namespace SoftwareRasterizer
 {
@@ -101,24 +102,58 @@ namespace SoftwareRasterizer
             }
             else if (strcmp(lineHeader, "f") == 0)
             {
-                // For now, faces must be triangularized (ie 3 indices per face maximum).
-                unsigned int iv[3], it[3], in[3];
-                int count = fscanf(file, "%d/%d/%d %d/%d/%d %d/%d/%d\n", &iv[0], &it[0], &in[0], &iv[1], &it[1], &in[1], &iv[2], &it[2], &in[2]);
-                if (count != 9)
+                // Count spaces in line, which delimit values.
+                int numberOfEntries = 0;//assume at least one value in line.
+                char linestr[128];
+                fgets(linestr, sizeof(linestr), file);
+
+                // tokenize and handle values
+                char* tokens = strtok(linestr, " ");
+                std::vector<unsigned int> iv, it, in;
+                while (tokens != NULL)
                 {
-                    throw std::exception("Failed to load face!");
-                }            
-                m_Triangles.push_back(Triangle(
-                    Vertex(positions[iv[0] - 1], texcoords[it[0] - 1], normals[in[0] - 1]),
-                    Vertex(positions[iv[1] - 1], texcoords[it[1] - 1], normals[in[1] - 1]),
-                    Vertex(positions[iv[2] - 1], texcoords[it[2] - 1], normals[in[2] - 1]),
-                    materialIndex
-                ));
-        }
+                    if (strlen(tokens) > 1)
+                    {
+                        iv.push_back(0);
+                        it.push_back(0);
+                        in.push_back(0);
+                        sscanf(tokens, "%d/%d/%d", &iv[iv.size() - 1], &it[it.size() - 1], &in[in.size() - 1]);
+                    }
+                    tokens = strtok(NULL, " ");
+                }
+
+                // Add all triangles to the array.
+                for (int i = 0; i < iv.size() - 2; ++i)
+                {
+                    int idx1 = i + 0;
+                    int idx2 = i + 1;
+                    int idx3 = i + 2;
+                    m_Triangles.push_back(Triangle(
+                        Vertex(positions[iv[idx1] - 1], texcoords[it[idx1] - 1], normals[in[idx1] - 1]),
+                        Vertex(positions[iv[idx2] - 1], texcoords[it[idx2] - 1], normals[in[idx2] - 1]),
+                        Vertex(positions[iv[idx3] - 1], texcoords[it[idx3] - 1], normals[in[idx3] - 1]),
+                        materialIndex
+                    ));
+                }
+                // Add final triangle, connecting face back to the first vertex.
+                if (iv.size() > 1)
+                {
+                    int idx1 = iv.size() - 2;
+                    int idx2 = iv.size() - 1;
+                    int idx3 = 0;
+                    m_Triangles.push_back(Triangle(
+                        Vertex(positions[iv[idx1] - 1], texcoords[it[idx1] - 1], normals[in[idx1] - 1]),
+                        Vertex(positions[iv[idx2] - 1], texcoords[it[idx2] - 1], normals[in[idx2] - 1]),
+                        Vertex(positions[iv[idx3] - 1], texcoords[it[idx3] - 1], normals[in[idx3] - 1]),
+                        materialIndex
+                    ));
+                }
+            }
         }
 
         std::cout << "Model loaded.\nbounds: [" << bounds[0].x << "," << bounds[1].x << "], ["
             << bounds[0].y << "," << bounds[1].y << "], [" << bounds[0].z << "," << bounds[1].z << "]" << std::endl;
+        std::cout << "# faces: " << m_Triangles.size() << std::endl;
     }
 
     bool Model::inNDCscreen(glm::vec3 v)
@@ -162,6 +197,7 @@ namespace SoftwareRasterizer
                     v[2] /= v[2].z;
 
                 // Check whether projected points fit view volume in NDC space.
+                // Without this check, the 'Line' class cannot draw properly.
                 bool chk[3] = { inNDCscreen(v[0]), inNDCscreen(v[1]), inNDCscreen(v[2]) };
 
                 // Get diffuse color. Remember opencv requires conversion RGB -> BGR.
@@ -177,19 +213,18 @@ namespace SoftwareRasterizer
                 {
                     // Transform coordinates to screen space for drawing.
                     Point p1(int((v[n].x + 1) * 0.5 * w), int((v[n].y + 1) * 0.5 * h));
-                    Point p2(int((v[n+1%3].x+1)*0.5*w), int((v[n+1%3].y+1)*0.5*h));
 
                     //// If in wireframe mode, draw lines of triangle edges.
-                    if (wireframeOn)// && chk[n] && chk[n + 1 % 3])
+                    if (wireframeOn && chk[n] && chk[n + 1 % 3])
                     {
+                        Point p2(int((v[n + 1 % 3].x + 1) * 0.5 * w), int((v[n + 1 % 3].y + 1) * 0.5 * h));
                         Line l(p1, p2);
                         l.draw(img, col, 1U);
                     }
-                    //// Else add point to array.
+                    //// Else add point to array for drawing.
                     else if (p1.x >= 0 && p1.y >= 0)
                     {
-                        contours.push_back(cv::Point(int((v[n].x + 1) * 0.5 * w), 
-                            int((v[n].y + 1) * 0.5 * h)));
+                        contours.push_back(cv::Point(p1.x,p1.y));
                     }
                 
                     // Draw filled triangle(s) as necessary.

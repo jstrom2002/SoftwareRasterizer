@@ -88,19 +88,18 @@ namespace SoftwareRasterizer
 		Scene scene;
 		scene.w = 800;
 		scene.h = 600;		
-		glm::vec3 position = glm::vec3(0.0f, 0.0f, -20.0f);
-		glm::vec3 rotation = glm::vec3(0.0f, 0.1f, 0.0f);		
+		glm::vec3 rotation = glm::vec3(0.1f, 0.1f, 0.0f);		
 
 		// Add test model 1.
 		scene.AddModel("models/face.obj");
-		scene.models[0].position = position;
-		scene.models[0].scale = 2.0f;
+		scene.models[0].position = glm::vec3(-0.2f, 0.0f, -1.0f);
+		scene.models[0].scale = 1.0f;
 		scene.models[0].rotation = rotation;
 
 		// Add test model 2.
 		scene.AddModel("models/cube.obj");
-		scene.models[1].position = position;
-		scene.models[1].scale = 0.1f;
+		scene.models[1].position = glm::vec3(0.2f, 0.0f, -1.0f);
+		scene.models[1].scale = 0.15f;
 		scene.models[1].rotation = rotation;
 
 		// Draw all.

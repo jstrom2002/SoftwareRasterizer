@@ -11,7 +11,7 @@ SoftwareRasterizer::Scene scene;
 int main(int argc, char** argv) 
 {
 	// If args are insufficient, run test mode.
-	if (argc < 4)
+	if (1)//argc < 4)
 	{
 		//tests.LineAlgSpeedTest();
 		tests.RenderTest();
