@@ -3,8 +3,6 @@
 #include "Line.h"
 #include "Model.h"
 
-#include <glm/gtc/matrix_transform.hpp>
-#include <opencv2/highgui.hpp>
 #include <iostream>
 #include <vector>
 #include <ctime>
@@ -30,7 +28,6 @@ namespace SoftwareRasterizer
 		double test5 = 0;
 
 		// Generate an array of random lines for tests. 
-		srand(clock());//make random lines non-deterministic.
 		std::vector<SoftwareRasterizer::Line> lines;
 		for (int i = 0; i < numLines; ++i) {
 			lines.push_back(SoftwareRasterizer::Line(
@@ -66,7 +63,7 @@ namespace SoftwareRasterizer
 			test4 += (double(clock2 - clock1) / CLOCKS_PER_SEC) / numLines;
 		}
 
-		// Display time for completion.
+		// Display times for completion.
 		std::cout << "time Bresenham: " << test1 / numTests << " sec per line\n";
 		std::cout << "time EFLA: " << test2 / numTests << " sec per line\n";
 		std::cout << "time Wu: " << test3 / numTests << " sec per line\n";
@@ -86,17 +83,19 @@ namespace SoftwareRasterizer
 
 	bool SoftwareRasterizerUnitTests::RenderTest()
 	{
+		// Initialize vars for rendering.
 		int w = 800;
-		int h = 600;
-		
-		glm::vec3 position = glm::vec3(300.0f, 300.0f, 0.0f);
+		int h = 600;		
+		glm::vec3 position = glm::vec3(0.0f, 0.0f, -20.0f);
 		glm::vec3 rotation = glm::vec3(0.0f, 0.1f, 0.0f);
 
+		// Draw test model 1.
 		Model model1("models/face.obj");
-		model1.Draw(w, h, position, 1500.0f, rotation);
+		model1.Draw(w, h, position, 2.0f, rotation);
 
+		// Draw test model 2.
 		Model model2("models/cube.obj");
-		model2.Draw(w, h, position, 100.0f, rotation);
+		model2.Draw(w, h, position, 0.1f, rotation);
 
 		return true;
 	}

@@ -63,7 +63,7 @@ namespace SoftwareRasterizer
                 if (i >= 0 && i <= data.rows - 1) {
                     //if the image has 3 channels, color the pixel
                     if (data.channels() > 1) {
-                        data.at<cv::Scalar>(i, x) = cv::Scalar(color[0],color[1],color[2]);
+                        data.at<cv::Vec3f>(i, x) = cv::Vec3f(color[0],color[1],color[2]);
                     }
                     else {//if grayscale, convert to color to grayscale
                         data.at<float>(i, x) = convertRGBtoGrayscaleLuminance(color);
@@ -76,7 +76,7 @@ namespace SoftwareRasterizer
                 if (i >= 0 && i <= data.cols - 1) {
                     //if the image has 3 channels, color the pixel
                     if (data.channels() > 1) {
-                        data.at<cv::Scalar>(y, i) = cv::Scalar(color[0], color[1], color[2]);
+                        data.at<cv::Vec3f>(y, i) = cv::Vec3f(color[0], color[1], color[2]);
                     }
                     else {//if grayscale, convert to color to grayscale
                         data.at<float>(y, i) = convertRGBtoGrayscaleLuminance(color);
