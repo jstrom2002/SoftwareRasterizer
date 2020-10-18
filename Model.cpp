@@ -22,7 +22,6 @@ namespace SoftwareRasterizer
         bounds[0] = glm::vec3(std::numeric_limits<float>::max());
         bounds[1] = glm::vec3(-std::numeric_limits<float>::max());
         LoadTriangles(filename);
-        wireframeOn = true;
     }
 
     void Model::LoadTriangles(std::string  filename)
@@ -101,13 +100,10 @@ namespace SoftwareRasterizer
                 }
             }
             else if (strcmp(lineHeader, "f") == 0)
-            {
-                // Count spaces in line, which delimit values.
-                int numberOfEntries = 0;//assume at least one value in line.
+            {               
+                // Tokenize line and parse index values.
                 char linestr[128];
                 fgets(linestr, sizeof(linestr), file);
-
-                // tokenize and handle values
                 char* tokens = strtok(linestr, " ");
                 std::vector<unsigned int> iv, it, in;
                 while (tokens != NULL)
@@ -151,7 +147,7 @@ namespace SoftwareRasterizer
             }
         }
 
-        std::cout << "Model loaded.\nbounds: [" << bounds[0].x << "," << bounds[1].x << "], ["
+        std::cout << "Model " + filename + " loaded.\nbounds: [" << bounds[0].x << "," << bounds[1].x << "], ["
             << bounds[0].y << "," << bounds[1].y << "], [" << bounds[0].z << "," << bounds[1].z << "]" << std::endl;
         std::cout << "# faces: " << m_Triangles.size() << std::endl;
     }
@@ -160,7 +156,7 @@ namespace SoftwareRasterizer
     {
         if (v.x >= -1 && v.x <= 1 &&
             v.y >= -1 && v.y <= 1 &&
-            v.z >= 0 && v.z <= 1)
+            v.z >= -1 && v.z <= 1)
         {
             return true;
         }
@@ -168,7 +164,8 @@ namespace SoftwareRasterizer
             return false;
     }
     
-    void Model::Draw(cv::Mat& img, glm::mat4 P, glm::mat4 V, int w, int h, int frameCount)
+    void Model::Draw(cv::Mat& img, cv::Mat& imgZ, glm::mat4 P, glm::mat4 V, int w, int h, 
+        int frameCount, bool wireframeOn)
     {
             // Apply transforms.
             glm::mat4 M = glm::mat4(1);
@@ -188,7 +185,14 @@ namespace SoftwareRasterizer
                     glm::vec3(MVP * glm::vec4(this->m_Triangles[i].v3.position, 1.0f))
                 };
 
-                // Normalize by homogenous coordinate.
+                // Get least depth value (temporary fix until per-pixel depth can be rendered).
+                // Remember opencv requires conversion RGB -> BGR.
+                float leastDepth = (v[0].z < v[1].z) ? v[0].z : v[1].z;
+                leastDepth = (v[2].z < leastDepth) ? v[2].z : leastDepth;
+                float coldepth[3] = { 0,0,leastDepth };
+                cv::Scalar depthcv = cv::Scalar(coldepth[0], coldepth[1], coldepth[2]);
+
+                // Normalize by homogenous coordinate to convert from clip space to screen space.
                 if(v[0].z != 0)
                     v[0] /= v[0].z;
                 if (v[1].z != 0)
@@ -222,9 +226,10 @@ namespace SoftwareRasterizer
                         Point p2(int((v[j].x + 1) * 0.5 * w), int((v[j].y + 1) * 0.5 * h));
                         Line l(p1, p2);
                         l.draw(img, col, 1U);
+                        l.draw(imgZ, coldepth, 1U);
                     }
                     //// Else add point to array for drawing.
-                    else if (p1.x >= 0 && p1.y >= 0)
+                    else if (chk[n])
                     {
                         contours.push_back(cv::Point(p1.x,p1.y));
                     }
@@ -234,6 +239,7 @@ namespace SoftwareRasterizer
                     {
                         contourVec.push_back(contours);
                         cv::drawContours(img, contourVec, 0, colcv, -1, cv::LINE_AA);
+                        cv::drawContours(imgZ, contourVec, 0, depthcv, -1, cv::LINE_AA);
                         contourVec.clear();
                         contours.clear();
                     }

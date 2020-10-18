@@ -98,8 +98,8 @@ namespace SoftwareRasterizer
 
 		// Add test model 2.
 		scene.AddModel("models/cube.obj");
-		scene.models[1].position = glm::vec3(0.2f, 0.0f, -1.0f);
-		scene.models[1].scale = 0.15f;
+		scene.models[1].position = glm::vec3(0.15f, 0.0f, -1.0f);
+		scene.models[1].scale = 0.185f;
 		scene.models[1].rotation = rotation;
 
 		// Draw all.

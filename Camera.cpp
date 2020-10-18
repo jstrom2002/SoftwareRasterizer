@@ -10,6 +10,7 @@ namespace SoftwareRasterizer
 
 	void Camera::Update()
 	{
+		// calc view matrix and related vectors.
 		right = glm::normalize(glm::cross(front, worldUp));
 		up = glm::normalize(glm::cross(right, front));
 		ViewMatrix = glm::lookAt(this->position, this->position + this->front, this->up);
