@@ -1,9 +1,12 @@
 #include "UnitTests.h"
+#include "Scene.h"
 #include "Model.h"
+#include <glm/glm.hpp>
 #include <iostream>
 #include <string>
 
 SoftwareRasterizer::SoftwareRasterizerUnitTests tests;
+SoftwareRasterizer::Scene scene;
 
 int main(int argc, char** argv) 
 {
@@ -19,6 +22,11 @@ int main(int argc, char** argv)
 	// [position x] [position y] [position z] [scale] [rotation x] [rotation y] [rotation z].'"
 	else
 	{		
+		// Set scene frame width/height.
+		scene.w = std::stoi(argv[2]);
+		scene.h = std::stoi(argv[3]);
+		
+		// Load model with appropriate transforms.
 		glm::vec3 pos(0);
 		glm::vec3 rot(0);
 		float scaleVal=1;
@@ -30,7 +38,12 @@ int main(int argc, char** argv)
 			rot = glm::vec3(std::stof(argv[8]), std::stof(argv[9]), std::stof(argv[10]));
 
 		std::cout << "Loading object file " << argv[1] << std::endl;
-		SoftwareRasterizer::Model model(argv[1]);
-		model.Draw(std::stoi(argv[2]), std::stoi(argv[3]), pos, scaleVal, rot);
+		scene.AddModel(argv[1]);
+		scene.models[0].position = pos;
+		scene.models[0].rotation = rot;
+		scene.models[0].scale = scaleVal;
+
+		// Draw scene.
+		scene.Draw();
 	}
 }

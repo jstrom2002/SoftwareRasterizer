@@ -1,6 +1,7 @@
 #include "UnitTests.h"
 #include "Point.h"
 #include "Line.h"
+#include "Scene.h"
 #include "Model.h"
 
 #include <iostream>
@@ -84,19 +85,26 @@ namespace SoftwareRasterizer
 	bool SoftwareRasterizerUnitTests::RenderTest()
 	{
 		// Initialize vars for rendering.
-		int w = 800;
-		int h = 600;		
+		Scene scene;
+		scene.w = 800;
+		scene.h = 600;		
 		glm::vec3 position = glm::vec3(0.0f, 0.0f, -20.0f);
-		glm::vec3 rotation = glm::vec3(0.0f, 0.1f, 0.0f);
+		glm::vec3 rotation = glm::vec3(0.0f, 0.1f, 0.0f);		
 
-		// Draw test model 1.
-		Model model1("models/face.obj");
-		model1.Draw(w, h, position, 2.0f, rotation);
+		// Add test model 1.
+		scene.AddModel("models/face.obj");
+		scene.models[0].position = position;
+		scene.models[0].scale = 2.0f;
+		scene.models[0].rotation = rotation;
 
-		// Draw test model 2.
-		Model model2("models/cube.obj");
-		model2.Draw(w, h, position, 0.1f, rotation);
+		// Add test model 2.
+		scene.AddModel("models/cube.obj");
+		scene.models[1].position = position;
+		scene.models[1].scale = 0.1f;
+		scene.models[1].rotation = rotation;
 
+		// Draw all.
+		scene.Draw();
 		return true;
 	}
 }

@@ -9,18 +9,21 @@ namespace SoftwareRasterizer
 	class Model
 	{
 	public:
+        glm::vec3 position, rotation;
+        float scale;
         std::vector<Triangle> m_Triangles;  
         std::vector<Material> m_Materials;  
         glm::vec3 bounds[2];//bounds[0] = minima, bounds[1] = maxima.
         bool wireframeOn;
 
-        Model(const char* filename);
-        void Draw(int w, int h, glm::vec3 pos, float scaleval, glm::vec3 rot);
+        Model(std::string filename);
+        void Draw(cv::Mat& img, glm::mat4 P, glm::mat4 V, int w, int h, int frameCount);
+        bool inNDCscreen(glm::vec3 v);
 
     private:
         std::vector<std::string> m_MaterialNames;
-        void LoadTriangles(const char* filename);
-        void LoadMaterials(const char* filename);
+        void LoadTriangles(std::string  filename);
+        void LoadMaterials(std::string  filename);
 	};
 
 }

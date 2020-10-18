@@ -14,19 +14,21 @@
 
 namespace SoftwareRasterizer
 {
-    Model::Model(const char* filename)
+    Model::Model(std::string  filename)
     {
+        position = rotation = glm::vec3(0);
+        scale = 1;
         bounds[0] = glm::vec3(std::numeric_limits<float>::max());
         bounds[1] = glm::vec3(-std::numeric_limits<float>::max());
         LoadTriangles(filename);
-        wireframeOn = false;
+        wireframeOn = 0;
     }
 
-    void Model::LoadTriangles(const char* filename)
+    void Model::LoadTriangles(std::string  filename)
     {
         char mtlname[80];
         memset(mtlname, 0, 80);
-        strncpy(mtlname, filename, strlen(filename) - 4);
+        strncpy(mtlname, filename.c_str(), strlen(filename.c_str()) - 4);
         strcat(mtlname, ".mtl");
 
         LoadMaterials(mtlname);
@@ -37,7 +39,7 @@ namespace SoftwareRasterizer
         unsigned int materialIndex = -1;
         Material currentMaterial;
 
-        FILE* file = fopen(filename, "r");
+        FILE* file = fopen(filename.c_str(), "r");
         if (!file)
         {
             throw std::exception("Failed to open .OBJ file!");
@@ -118,39 +120,49 @@ namespace SoftwareRasterizer
         std::cout << "Model loaded.\nbounds: [" << bounds[0].x << "," << bounds[1].x << "], ["
             << bounds[0].y << "," << bounds[1].y << "], [" << bounds[0].z << "," << bounds[1].z << "]" << std::endl;
     }
-    
-    void Model::Draw(int w, int h, glm::vec3 pos, float scaleVal, glm::vec3 rot)
+
+    bool Model::inNDCscreen(glm::vec3 v)
     {
-        // Setup window and viewport variables. For now, only simple orthographic projection and
-        // view matrices are implemented.
-        cv::Mat img;
-        unsigned int frameCount = 0;
-        glm::mat4 P = glm::perspective(45.0f, float(w) / float(h), 0.1f, 100.0f);
-        glm::mat4 V = glm::lookAt(glm::vec3(0), glm::vec3(0, 0, -1), glm::vec3(0, 1, 0));
-
-        // Draw model until user presses 'ESC' key.
-        std::cout << "*** Press 'ESC' to quit ****" << std::endl;
-        while (cv::waitKey(1) != 27)
+        if (v.x >= -1 && v.x <= 1 &&
+            v.y >= -1 && v.y <= 1 &&
+            v.z >= -1 && v.z <= 1)
         {
-            // Start with a cleared image.
-            img = cv::Mat::zeros(w, h, CV_32FC3);
-
+            return true;
+        }
+        else
+            return false;
+    }
+    
+    void Model::Draw(cv::Mat& img, glm::mat4 P, glm::mat4 V, int w, int h, int frameCount)
+    {
             // Apply transforms.
             glm::mat4 M = glm::mat4(1);
-            M = glm::translate(M, pos);
-            M = glm::scale(M, glm::vec3(1,-1,1) * scaleVal);//invert y-axis value to flip image.
-            M = glm::rotate(M, glm::radians(float(frameCount * rot.length())), glm::normalize(rot));
+            M = glm::translate(M, this->position);
+            M = glm::scale(M, glm::vec3(1,-1,1) * this->scale);//invert y-axis value to flip image.
+            M = glm::rotate(M, glm::radians(float(frameCount * this->rotation.length())), 
+                glm::normalize(this->rotation));
             glm::mat4 MVP = P* V* M;
 
             // Iterate over triangles, project to screen space, rasterize lines.
             for (int i = 0; i < this->m_Triangles.size(); ++i)
             {
                 // Transform to clip space by projection, dividing out z,w values to get (x,y) coord.
-                glm::vec2 v[3] = {
-                    glm::vec2(MVP * glm::vec4(this->m_Triangles[i].v1.position, 1.0f)),
-                    glm::vec2(MVP * glm::vec4(this->m_Triangles[i].v2.position, 1.0f)),
-                    glm::vec2(MVP * glm::vec4(this->m_Triangles[i].v3.position, 1.0f))
+                glm::vec3 v[3] = {
+                    glm::vec3(MVP * glm::vec4(this->m_Triangles[i].v1.position, 1.0f)),
+                    glm::vec3(MVP * glm::vec4(this->m_Triangles[i].v2.position, 1.0f)),
+                    glm::vec3(MVP * glm::vec4(this->m_Triangles[i].v3.position, 1.0f))
                 };
+
+                // Normalize by homogenous coordinate.
+                if(v[0].z != 0)
+                    v[0] /= v[0].z;
+                if (v[1].z != 0)
+                    v[1] /= v[1].z;
+                if (v[2].z != 0)
+                    v[2] /= v[2].z;
+
+                // Check whether projected points fit view volume in NDC space.
+                bool chk[3] = { inNDCscreen(v[0]), inNDCscreen(v[1]), inNDCscreen(v[2]) };
 
                 // Get diffuse color. Remember opencv requires conversion RGB -> BGR.
                 Material* material = &this->m_Materials[this->m_Triangles[i].materialIndex];
@@ -161,42 +173,40 @@ namespace SoftwareRasterizer
                 // Draw all polygons/shapes on output frame.
                 std::vector<cv::Point> contours; 
                 std::vector<std::vector<cv::Point>> contourVec;
-                for (int i = 0; i < 3; ++i)
+                for (int n = 0; n < 3; ++n)
                 {
-                    int j = (i + 1) % 3;
                     // Transform coordinates to screen space for drawing.
-                    Point p1(int((v[i].x + 1) * 0.5 * w), int((v[i].y + 1) * 0.5 * h));
+                    Point p1(int((v[n].x + 1) * 0.5 * w), int((v[n].y + 1) * 0.5 * h));
+                    Point p2(int((v[n+1%3].x+1)*0.5*w), int((v[n+1%3].y+1)*0.5*h));
 
-                    //// Draw outline of triangle using sub-pixel accurate Wu rasterization algorithm.
-                    if (wireframeOn)
+                    //// If in wireframe mode, draw lines of triangle edges.
+                    if (wireframeOn)// && chk[n] && chk[n + 1 % 3])
                     {
-                        Point p2(int((v[j].x + 1) * 0.5 * w), int((v[j].y + 1) * 0.5 * h));
                         Line l(p1, p2);
-                        l.draw(img, col, 1U, LINE_ALGORITHM::WU);
+                        l.draw(img, col, 1U);
                     }
                     //// Else add point to array.
                     else if (p1.x >= 0 && p1.y >= 0)
-                        contours.push_back(cv::Point(p1.x, p1.y));                        
+                    {
+                        contours.push_back(cv::Point(int((v[n].x + 1) * 0.5 * w), 
+                            int((v[n].y + 1) * 0.5 * h)));
+                    }
                 
                     // Draw filled triangle(s) as necessary.
                     if (!wireframeOn && contours.size() >= 3)
                     {
                         contourVec.push_back(contours);
-                        cv::drawContours(img, contourVec, -1, colcv, -1, cv::LINE_AA);
+                        cv::drawContours(img, contourVec, 0, colcv, -1, cv::LINE_AA);
                         contourVec.clear();
                         contours.clear();
                     }
                 }
             }
-            // Finally, display results.
-            cv::imshow("Software Rasterizer", img);
-            frameCount++;
-        }
     }
 
-    void Model::LoadMaterials(const char* filename)
+    void Model::LoadMaterials(std::string  filename)
     {
-        FILE* file = fopen(filename, "r");
+        FILE* file = fopen(filename.c_str(), "r");
         if (!file)
         {
             throw std::exception("Failed to open material file!");
