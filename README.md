@@ -10,3 +10,4 @@ This program is an extremely minimal software rasterizer for loading and renderi
 
 ![alt text](screenshot.png?raw=true)
 ![alt text](screenshot_0.png?raw=true)
+![alt text](screenshot_1.png?raw=true)
