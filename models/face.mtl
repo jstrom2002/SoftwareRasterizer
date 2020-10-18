@@ -1,0 +1,11 @@
+# Blender v2.81 (sub 12) MTL File: 'face.obj'
+# www.blender.org
+
+newmtl face
+	Ka 0 0 0
+	Kd 1 0.80 0.7
+	Ks 1 1 1
+	Ns 0
+	d 1
+	Tf 1 1 1
+	Ni 1.5

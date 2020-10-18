@@ -1,5 +1,7 @@
-# Blender v2.81 (sub 12) OBJ File: 'basemesh.blend'
+# Blender v2.81 (sub 12) OBJ File: 'face.obj'
 # www.blender.org
+mtllib face.mtl
+
 o face_obj
 v 0.036173 0.057203 0.066624
 v 0.040862 0.075706 0.059986
@@ -2341,6 +2343,7 @@ vn -0.8422 -0.3593 0.4020
 vn 0.0635 -0.8607 -0.5051
 vn 0.5338 0.7793 0.3283
 vn 0.9739 -0.0030 0.2271
+usemtl face
 s 1
 f 123/1/1 88/2/2 91/3/3 122/4/4
 f 125/5/5 100/6/6 90/7/7 121/8/8
