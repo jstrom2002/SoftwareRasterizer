@@ -5,10 +5,10 @@
 
 namespace SoftwareRasterizer
 {
-    Point::Point(int x_, int y_) :
-        x(x_),
-        y(y_)
-    {}
+    Point::Point(int x_, int y_) : x(x_), y(y_) {}
+
+    Point::Point(cv::Point p) : x(p.x), y(p.y) {}
+
 
     void Point::operator=(Point p) {
         x = p.x;

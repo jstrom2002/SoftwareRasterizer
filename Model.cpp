@@ -124,7 +124,7 @@ namespace SoftwareRasterizer
                     int idx1 = i + 0;
                     int idx2 = i + 1;
                     int idx3 = i + 2;
-                    m_Triangles.push_back(Triangle(
+                    m_Triangles.push_back(Triangle3D(
                         Vertex(positions[iv[idx1] - 1], texcoords[it[idx1] - 1], normals[in[idx1] - 1]),
                         Vertex(positions[iv[idx2] - 1], texcoords[it[idx2] - 1], normals[in[idx2] - 1]),
                         Vertex(positions[iv[idx3] - 1], texcoords[it[idx3] - 1], normals[in[idx3] - 1]),
@@ -137,7 +137,7 @@ namespace SoftwareRasterizer
                     int idx1 = iv.size() - 2;
                     int idx2 = iv.size() - 1;
                     int idx3 = 0;
-                    m_Triangles.push_back(Triangle(
+                    m_Triangles.push_back(Triangle3D(
                         Vertex(positions[iv[idx1] - 1], texcoords[it[idx1] - 1], normals[in[idx1] - 1]),
                         Vertex(positions[iv[idx2] - 1], texcoords[it[idx2] - 1], normals[in[idx2] - 1]),
                         Vertex(positions[iv[idx3] - 1], texcoords[it[idx3] - 1], normals[in[idx3] - 1]),
@@ -165,7 +165,7 @@ namespace SoftwareRasterizer
     }
     
     void Model::Draw(cv::Mat& img, cv::Mat& imgZ, glm::mat4 P, glm::mat4 V, int w, int h, 
-        int frameCount, bool wireframeOn)
+        int frameCount, bool wireframeOn, bool useOpenCVdrawing)
     {
             // Apply transforms.
             glm::mat4 M = glm::mat4(1);
@@ -179,7 +179,8 @@ namespace SoftwareRasterizer
             for (int i = 0; i < this->m_Triangles.size(); ++i)
             {
                 // Transform to clip space by projection, dividing out z,w values to get (x,y) coord.
-                glm::vec3 v[3] = {
+                glm::vec3 v[3] = 
+                {
                     glm::vec3(MVP * glm::vec4(this->m_Triangles[i].v1.position, 1.0f)),
                     glm::vec3(MVP * glm::vec4(this->m_Triangles[i].v2.position, 1.0f)),
                     glm::vec3(MVP * glm::vec4(this->m_Triangles[i].v3.position, 1.0f))
@@ -201,7 +202,7 @@ namespace SoftwareRasterizer
                     v[2] /= v[2].z;
 
                 // Check whether projected points fit view volume in NDC space.
-                // Without this check, the 'Line' class cannot draw properly.
+                // Without this check, the 'Line' class may not draw properly.
                 bool chk[3] = { inNDCscreen(v[0]), inNDCscreen(v[1]), inNDCscreen(v[2]) };
 
                 // Get diffuse color. Remember opencv requires conversion RGB -> BGR.
@@ -215,6 +216,7 @@ namespace SoftwareRasterizer
                 std::vector<std::vector<cv::Point>> contourVec;
                 for (int n = 0; n < 3; ++n)
                 {
+                    // Get next index in array for drawing triangle edges.
                     int j = (n + 1) % 3;
 
                     // Transform coordinates to screen space for drawing.
@@ -237,11 +239,21 @@ namespace SoftwareRasterizer
                     // Draw filled triangle(s) as necessary.
                     if (!wireframeOn && contours.size() >= 3)
                     {
-                        contourVec.push_back(contours);
-                        cv::drawContours(img, contourVec, 0, colcv, -1, cv::LINE_AA);
-                        cv::drawContours(imgZ, contourVec, 0, depthcv, -1, cv::LINE_AA);
-                        contourVec.clear();
-                        contours.clear();
+                        // Use OpenCV's 'drawContours()' function for rasterizing lines.
+                        if (useOpenCVdrawing)
+                        {
+                            contourVec.push_back(contours);
+                            cv::drawContours(img, contourVec, 0, colcv, -1, cv::LINE_AA);
+                            cv::drawContours(imgZ, contourVec, 0, depthcv, -1, cv::LINE_AA);
+                            contourVec.clear();
+                        }
+                        // Use homebrew rasterizer for triangles.
+                        else
+                        {
+                            Triangle2D t(contours[0], contours[1], contours[2]);
+                            t.Draw(img, imgZ, material, col, coldepth);
+                            contours.clear();
+                        }
                     }
                 }
             }

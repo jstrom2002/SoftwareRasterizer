@@ -11,13 +11,13 @@ namespace SoftwareRasterizer
 	public:
         glm::vec3 position, rotation;
         float scale;
-        std::vector<Triangle> m_Triangles;  
+        std::vector<Triangle3D> m_Triangles;
         std::vector<Material> m_Materials;  
         glm::vec3 bounds[2];//bounds[0] = minima, bounds[1] = maxima.
 
         Model(std::string filename);
         void Draw(cv::Mat& img, cv::Mat& imgZ, glm::mat4 P, glm::mat4 V, 
-            int w, int h, int frameCount, bool wireframeOn);
+            int w, int h, int frameCount, bool wireframeOn, bool useOpenCVdrawing);
 
     private:
         bool inNDCscreen(glm::vec3 v);

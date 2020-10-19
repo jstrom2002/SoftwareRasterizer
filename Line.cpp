@@ -8,8 +8,8 @@
 namespace SoftwareRasterizer
 {
     Line::Line(int x1_, int y1_, int x2_, int y2_) {
-        // Arrange points so that (x1,y1) is always above (x2,y2) 
-        if (y1_ < y2_) {
+        // Arrange points so that (x1,y1) is always above (ie less than) (x2,y2) 
+        if (y1_ <= y2_) {
             this->p1 = Point(x1_, y1_);
             this->p2 = Point(x2_, y2_);
         }
@@ -21,7 +21,7 @@ namespace SoftwareRasterizer
 
     Line::Line(Point p1, Point p2){
         // Arrange points so that (x1,y1) is always above (x2,y2) 
-        if (p1.y < p2.y) {
+        if (p1.y <= p2.y) {
             this->p1 = p1;
             this->p2 = p2;
         }
@@ -468,6 +468,33 @@ namespace SoftwareRasterizer
     }
 
     void Line::draw(cv::Mat& data, float color[3], unsigned int thickness, LINE_ALGORITHM method) {
+        
+        // Case: line is a point.
+        if (p1.x == p2.x && p1.y == p2.y)
+        {
+            setPixel(data,p1.x,p1.y,color,thickness,false);
+            return;
+        }
+
+        // Case: line is purely vertical. Note: due to constructor, p1.y is always <= p2.y.
+        if (p1.x == p2.x && p1.y != p2.y)
+        {
+            for (int i = p1.y; i < p2.y; ++i)            
+                setPixel(data, p1.x, i, color, thickness, false); 
+            return;
+        }
+
+        // Case: line is purely horizontal.
+        if (p1.x != p2.x && p1.y == p2.y)
+        {
+            int min_x = p1.x < p2.x ? p1.x : p2.x;
+            int max_x = p1.x > p2.x ? p1.x : p2.x;
+            for (int i = min_x; i < max_x; ++i)
+                setPixel(data, i, p1.y, color, thickness, false);
+            return;
+        }
+        
+        // Else, use rasterization algorithm.
         switch (method) {
         case LINE_ALGORITHM::BRESENHAM:
             Bresenham(*this, data, color, thickness);

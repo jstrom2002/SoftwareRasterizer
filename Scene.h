@@ -13,8 +13,11 @@ namespace SoftwareRasterizer
 	class Scene
 	{
 	public:
-		int w, h;
+		
+		// Objects for output frame and z-buffer.
 		cv::Mat frame, frameZ;
+
+		int w, h;
 		Camera camera;
 		std::vector<Model> models;
 		unsigned int frameCount;
@@ -23,6 +26,7 @@ namespace SoftwareRasterizer
 		bool showFPS;
 		bool showDepth;
 		bool wireframeOn;
+		bool useOpenCVdrawing;
 		char keyPressed;
 
 		Scene();

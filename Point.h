@@ -1,17 +1,21 @@
+/**
+*  Point.h -- This class is intended to represent 2D points for drawing on a planar image using 
+*			  the 'Line' class. If intending to represent 3D points, use the 'Vertex' class.
+*/
+
 #pragma once
 #include <string>
+#include <opencv2/opencv.hpp>
 
 namespace SoftwareRasterizer
 {
-	/*!
-	*  \brief Simple struct for holding point values to prevent using raw arrays.
-	*/
 	class Point {
 	public:
 		int x, y;
 
-		Point() {}
+		Point() : x(0), y(0) {}
 		Point(int x_, int y_);
+		Point(cv::Point p);
 
 		Point operator+(const Point& p) {
 			return Point(this->x + p.x, this->y + p.y);

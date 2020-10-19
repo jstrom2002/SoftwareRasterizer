@@ -5,7 +5,7 @@
 namespace SoftwareRasterizer
 {
     Scene::Scene() : w(0), h(0), frameCount(0), screenshotCount(0), windowClose(false), keyPressed(0),
-        showFPS(false), showDepth(false), wireframeOn(false)
+        showFPS(false), showDepth(false), wireframeOn(false), useOpenCVdrawing(false)
     {
         // Set screenshot count to last value.
         std::string ssname = "screenshot_" + std::to_string(screenshotCount) + ".png";
@@ -44,9 +44,10 @@ namespace SoftwareRasterizer
         std::cout << "'zc' - rotate camera horizontally" << std::endl;
         std::cout << "'p' - screenshot" << std::endl;
         std::cout << "'o' - show FPS" << std::endl;
-        std::cout << "'u' - wireframe mode" << std::endl;
         std::cout << "'i' - render depth" << std::endl;
-        
+        std::cout << "'u' - wireframe mode" << std::endl;
+        std::cout << "'j' - rasterize triangles using OpenCV" << std::endl;
+        std::cout << "***********************" << std::endl;        
         while (!windowClose)
         {
             // Update per-frame logic and user input.
@@ -54,24 +55,32 @@ namespace SoftwareRasterizer
             keyPressed = (char)cv::waitKey(1);
             ProcessInput(keyPressed);
 
-            // Start with a cleared image and z-buffer.
+            // Start with a cleared image and z-buffer. Z-buffer cleared value = 1,
+            // farthest depth of view volume in clip space.
             frame = cv::Mat::zeros(h, w, CV_32FC3);
-            frameZ = cv::Mat::zeros(h, w, CV_32FC3);
+            frameZ = cv::Mat::ones(h, w, CV_32FC3);
 
             // Render all models.
             startFrameTime = clock();
             glm::mat4 V = camera.getViewMatrix();
             for (int i = 0; i < models.size(); ++i)            
-                models[i].Draw(frame, frameZ, P, V, w, h, frameCount, wireframeOn);
+                models[i].Draw(frame, frameZ, P, V, w, h, frameCount, wireframeOn,
+                    useOpenCVdrawing);
             endFrameTime = clock();
 
-            // Draw FPS info if necessary.
+            // Draw text info if necessary.
             if (showFPS)
             {
                 std::string FPStext = "FPS: " + std::to_string(
                     (float(endFrameTime) - float(startFrameTime)) / CLOCKS_PER_SEC );
                 cv::putText(frame, FPStext, cv::Point(10, 30), cv::FONT_HERSHEY_SIMPLEX,
-                    1, cv::Scalar(255, 255, 255, 255), 2, cv::LINE_AA);
+                    0.75, cv::Scalar(255, 255, 255, 255), 2, cv::LINE_AA);
+            }
+            if (useOpenCVdrawing)
+            {
+                std::string FPStext = "Use OCV";
+                cv::putText(frame, FPStext, cv::Point(10, 50), cv::FONT_HERSHEY_SIMPLEX,
+                    0.75, cv::Scalar(255, 255, 255, 255), 2, cv::LINE_AA);
             }
 
             // Finally, display results.
@@ -87,7 +96,7 @@ namespace SoftwareRasterizer
     {
         if (c == 27)//'ESC' key.
             windowClose = true;
-        
+
         // Handle camera movement.
         else if (c == 'w')
             camera.position += camera.front * camera.movementSpeed;
@@ -97,7 +106,7 @@ namespace SoftwareRasterizer
             camera.position += camera.right * camera.movementSpeed;
         else if (c == 'd')
             camera.position -= camera.right * camera.movementSpeed;
-        
+
         // Handle camera rotation.
         else if (c == 'q')
             camera.front = glm::normalize(camera.front + camera.up * camera.movementSpeed);
@@ -115,6 +124,8 @@ namespace SoftwareRasterizer
             this->showDepth = !this->showDepth;
         else if (c == 'u')
             this->wireframeOn = !this->wireframeOn;
+        else if (c == 'j')
+            this->useOpenCVdrawing = !this->useOpenCVdrawing;
         else if (c == 'p')
         {
             //Save screenshot.

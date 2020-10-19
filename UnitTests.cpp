@@ -13,6 +13,7 @@ namespace SoftwareRasterizer
 	bool SoftwareRasterizerUnitTests::LineAlgSpeedTest()
 	{
 		// Initialize variables and objects for tests.
+		srand(clock());
 		cv::Mat img1 = cv::Mat::zeros(1000, 1000, CV_32F);
 		cv::Mat img2 = cv::Mat::zeros(1000, 1000, CV_32F);
 		cv::Mat img3 = cv::Mat::zeros(1000, 1000, CV_32F);
