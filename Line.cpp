@@ -31,6 +31,20 @@ namespace SoftwareRasterizer
         }
     }
 
+    Line::Line(glm::ivec2 p1, glm::ivec2 p2)
+    {
+        // Arrange points so that (x1,y1) is always above (x2,y2) 
+        if (p1.y <= p2.y) {
+            this->p1 = Point(p1.x,p1.y);
+            this->p2 = Point(p2.x,p2.y);
+        }
+        else {
+            this->p1 = Point(p2.x,p2.y);
+            this->p2 = Point(p1.x,p1.y);
+        }
+    }
+
+
     // Helper function to convert color values to grayscale.
     int convertRGBtoGrayscaleLuminance(float color[3]) {
         float gamma = 2.2;

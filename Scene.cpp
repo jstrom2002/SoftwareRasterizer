@@ -5,7 +5,8 @@
 namespace SoftwareRasterizer
 {
     Scene::Scene() : w(0), h(0), frameCount(0), screenshotCount(0), windowClose(false), keyPressed(0),
-        showFPS(false), showDepth(false), wireframeOn(false), useOpenCVdrawing(false)
+        showFPS(false), showDepth(false), wireframeOn(false), cullFace(false), frontFaceCCW(true),
+        depthTest(true)
     {
         // Set screenshot count to last value.
         std::string ssname = "screenshot_" + std::to_string(screenshotCount) + ".png";
@@ -46,7 +47,9 @@ namespace SoftwareRasterizer
         std::cout << "'o' - show FPS" << std::endl;
         std::cout << "'i' - render depth" << std::endl;
         std::cout << "'u' - wireframe mode" << std::endl;
-        std::cout << "'j' - rasterize triangles using OpenCV" << std::endl;
+        std::cout << "'j' - toggle face culling" << std::endl;       
+        std::cout << "'k' - toggle front face CCW or CW" << std::endl;       
+        std::cout << "'l' - toggle depth test" << std::endl;       
         std::cout << "***********************" << std::endl;        
         while (!windowClose)
         {
@@ -64,8 +67,8 @@ namespace SoftwareRasterizer
             startFrameTime = clock();
             glm::mat4 V = camera.getViewMatrix();
             for (int i = 0; i < models.size(); ++i)            
-                models[i].Draw(frame, frameZ, P, V, w, h, frameCount, wireframeOn,
-                    useOpenCVdrawing);
+                models[i].Draw(frame, frameZ, P, V, w, h, frameCount, wireframeOn, 
+                    cullFace, frontFaceCCW, depthTest);
             endFrameTime = clock();
 
             // Draw text info if necessary.
@@ -76,12 +79,10 @@ namespace SoftwareRasterizer
                 cv::putText(frame, FPStext, cv::Point(10, 30), cv::FONT_HERSHEY_SIMPLEX,
                     0.75, cv::Scalar(255, 255, 255, 255), 2, cv::LINE_AA);
             }
-            if (useOpenCVdrawing)
-            {
-                std::string FPStext = "Use OCV";
-                cv::putText(frame, FPStext, cv::Point(10, 50), cv::FONT_HERSHEY_SIMPLEX,
-                    0.75, cv::Scalar(255, 255, 255, 255), 2, cv::LINE_AA);
-            }
+
+            //// Opencv requires conversion RGB->BGR for proper visualization.
+            //cv::cvtColor(frame, frame, cv::COLOR_BGR2RGB);
+            //cv::cvtColor(frameZ, frameZ, cv::COLOR_BGR2RGB);
 
             // Finally, display results.
             if(showDepth)
@@ -103,9 +104,9 @@ namespace SoftwareRasterizer
         else if (c == 's')
             camera.position -= camera.front * camera.movementSpeed;
         else if (c == 'a')
-            camera.position += camera.right * camera.movementSpeed;
-        else if (c == 'd')
             camera.position -= camera.right * camera.movementSpeed;
+        else if (c == 'd')
+            camera.position += camera.right * camera.movementSpeed;
 
         // Handle camera rotation.
         else if (c == 'q')
@@ -113,9 +114,9 @@ namespace SoftwareRasterizer
         else if (c == 'e')
             camera.front = glm::normalize(camera.front - camera.up * camera.movementSpeed);
         else if (c == 'z')
-            camera.front = glm::normalize(camera.front + camera.right * camera.movementSpeed);
-        else if (c == 'c')
             camera.front = glm::normalize(camera.front - camera.right * camera.movementSpeed);
+        else if (c == 'c')
+            camera.front = glm::normalize(camera.front + camera.right * camera.movementSpeed);
 
         // Handle settings buttons.
         else if (c == 'o')
@@ -125,7 +126,11 @@ namespace SoftwareRasterizer
         else if (c == 'u')
             this->wireframeOn = !this->wireframeOn;
         else if (c == 'j')
-            this->useOpenCVdrawing = !this->useOpenCVdrawing;
+            this->cullFace = !this->cullFace;
+        else if (c == 'k')
+            this->frontFaceCCW = !this->frontFaceCCW;
+        else if (c == 'l')
+            this->depthTest = !this->depthTest;
         else if (c == 'p')
         {
             //Save screenshot.

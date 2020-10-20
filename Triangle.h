@@ -8,39 +8,39 @@ namespace SoftwareRasterizer
     class Point;
     class Material;
 
-    struct Triangle3D
+    /**
+    *  \brief Struct for loading 3D triangular faces of model meshes. Vertices are intended to be
+    *         loaded in culling order so that v[0],v[1],v[2] are counter-clockwise.
+    */
+    class Triangle
     {
-        Vertex v1, v2, v3;
+    public:
+        Vertex v[3];
         unsigned int materialIndex;
 
-        Triangle3D(Vertex v1, Vertex v2, Vertex v3, unsigned int mtlindex) : v1(v1), v2(v2), v3(v3), 
-            materialIndex(mtlindex) 
-        {}
-    };
+        Triangle(Vertex v1, Vertex v2, Vertex v3, unsigned int mtlindex);
+        Triangle(cv::Point p1, cv::Point p2, cv::Point p3);
 
-    struct Triangle2D
-    {
-        Point pt[3];
+        void Draw(cv::Mat& img, cv::Mat& imgZ, Material* mat, float* col,
+            bool wireframeOn, bool depthTest);
 
-        Triangle2D(Point p1, Point p2, Point p3) 
-        {
-            pt[0] = (p1); 
-            pt[1] = (p2); 
-            pt[2] = (p3);
+        inline bool isCCW() {
+            return glm::normalize(glm::cross(v[1].position - v[0].position,
+                v[2].position - v[0].position)).z <= 0; 
         }
 
-        Triangle2D(cv::Point p1, cv::Point p2, cv::Point p3)
-        {
-            pt[0] = (p1);
-            pt[1] = (p2);
-            pt[2] = (p3);
-        }
-        
-        void Draw(cv::Mat& img, cv::Mat& imgZ, Material* mat, float* col, float* depth);
-    private:
         float getMaxX();
         float getMinX();
         float getMaxY();
         float getMinY();
+        float getMaxZ();
+        float getMinZ();
+
+         glm::bvec3 checkVertsInNDCbounds();
+         void setInNDCbounds(glm::bvec3 inNDC);
+    private:
+        glm::bvec3 inNDC;
+        float getZ(glm::vec2 p);
+        glm::vec3 getBarycenterCoords(glm::vec3 p);
     };
 }

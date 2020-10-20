@@ -25,8 +25,10 @@ namespace SoftwareRasterizer
 		bool windowClose;
 		bool showFPS;
 		bool showDepth;
+		bool cullFace;
+		bool frontFaceCCW;
 		bool wireframeOn;
-		bool useOpenCVdrawing;
+		bool depthTest;
 		char keyPressed;
 
 		Scene();

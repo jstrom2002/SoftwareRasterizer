@@ -6,6 +6,7 @@
 #pragma once
 #include "Point.h"
 #include <opencv2/opencv.hpp>
+#include <glm/glm.hpp>
 
 namespace SoftwareRasterizer
 {
@@ -25,14 +26,11 @@ namespace SoftwareRasterizer
 		~Line() {}
 
 		/*!
-		* \brief Initializer of a line from four integer values.
+		* \brief Initializers of a line from integer values.
 		*/
 		Line(int x1_, int y1_, int x2_, int y2_);
-
-		/*!
-		* \brief Initializer of a line from two integer valued points.
-		*/
 		Line(Point p1, Point p2);
+		Line(glm::ivec2 p1, glm::ivec2 p2);
 
 		/*!
 		*  \brief Draws rasterized points along a line on an image.
