@@ -6,7 +6,7 @@ namespace SoftwareRasterizer
 {
     Scene::Scene() : w(0), h(0), frameCount(0), screenshotCount(0), windowClose(false), keyPressed(0),
         showFPS(false), showDepth(false), wireframeOn(false), cullFace(false), frontFaceCCW(true),
-        depthTest(true)
+        depthTest(true), showRenderedTriangleCount(false)
     {
         // Set screenshot count to last value.
         std::string ssname = "screenshot_" + std::to_string(screenshotCount) + ".png";
@@ -31,6 +31,14 @@ namespace SoftwareRasterizer
         models.push_back(m);
     }
 
+    unsigned int Scene::TotalTriangles()
+    {
+        unsigned int total = 0;
+        for (int i = 0; i < models.size(); ++i)
+            total += models[i].m_Triangles.size();
+        return total;
+    }
+
 	void Scene::Draw()
 	{
         // Setup window and viewport variables.
@@ -50,6 +58,7 @@ namespace SoftwareRasterizer
         std::cout << "'j' - toggle face culling" << std::endl;       
         std::cout << "'k' - toggle front face CCW or CW" << std::endl;       
         std::cout << "'l' - toggle depth test" << std::endl;       
+        std::cout << "';' - display rendered triangle count" << std::endl;       
         std::cout << "***********************" << std::endl;        
         while (!windowClose)
         {
@@ -60,29 +69,33 @@ namespace SoftwareRasterizer
 
             // Start with a cleared image and z-buffer. Z-buffer cleared value = 1,
             // farthest depth of view volume in clip space.
-            frame = cv::Mat::zeros(h, w, CV_32FC3);
-            frameZ = cv::Mat::ones(h, w, CV_32FC3);
+            frame = cv::Mat(h, w, CV_32FC3, cv::Scalar(0,0,0));
+            frameZ = cv::Mat(h, w, CV_32FC3, cv::Scalar(1,1,1));
 
             // Render all models.
+            unsigned int trianglesRendered = 0;
             startFrameTime = clock();
             glm::mat4 V = camera.getViewMatrix();
             for (int i = 0; i < models.size(); ++i)            
                 models[i].Draw(frame, frameZ, P, V, w, h, frameCount, wireframeOn, 
-                    cullFace, frontFaceCCW, depthTest);
+                    cullFace, frontFaceCCW, depthTest, trianglesRendered);
             endFrameTime = clock();
 
             // Draw text info if necessary.
             if (showFPS)
             {
                 std::string FPStext = "FPS: " + std::to_string(
-                    (float(endFrameTime) - float(startFrameTime)) / CLOCKS_PER_SEC );
+                    CLOCKS_PER_SEC/(float(endFrameTime) - float(startFrameTime)));
                 cv::putText(frame, FPStext, cv::Point(10, 30), cv::FONT_HERSHEY_SIMPLEX,
                     0.75, cv::Scalar(255, 255, 255, 255), 2, cv::LINE_AA);
             }
-
-            //// Opencv requires conversion RGB->BGR for proper visualization.
-            //cv::cvtColor(frame, frame, cv::COLOR_BGR2RGB);
-            //cv::cvtColor(frameZ, frameZ, cv::COLOR_BGR2RGB);
+            if (showRenderedTriangleCount)
+            {
+                std::string FPStext = "% triangles rendered: " + std::to_string(
+                    double(trianglesRendered)/double(this->TotalTriangles()));
+                cv::putText(frame, FPStext, cv::Point(10, 50), cv::FONT_HERSHEY_SIMPLEX,
+                    0.75, cv::Scalar(255, 255, 255, 255), 2, cv::LINE_AA);
+            }
 
             // Finally, display results.
             if(showDepth)
@@ -131,12 +144,21 @@ namespace SoftwareRasterizer
             this->frontFaceCCW = !this->frontFaceCCW;
         else if (c == 'l')
             this->depthTest = !this->depthTest;
+        else if (c == ';')
+            this->showRenderedTriangleCount = !this->showRenderedTriangleCount;
         else if (c == 'p')
         {
+            // Ensure screenshots are not being overwritten.
+            std::string ssname = "screenshot_" + std::to_string(screenshotCount) + ".png";
+            while (std::filesystem::exists(ssname))
+            {
+                screenshotCount++;
+                ssname = "screenshot_" + std::to_string(screenshotCount) + ".png";
+            }
+
             //Save screenshot.
             cv::Mat img = frame.clone();
             img.convertTo(img, CV_8UC3, 255.0);
-            std::string ssname = "screenshot_" + std::to_string(screenshotCount) + ".png";
             cv::imwrite(ssname, img);
             img.deallocate();
             std::cout << "screenshot saved." << std::endl;

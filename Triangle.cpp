@@ -139,10 +139,7 @@ namespace SoftwareRasterizer
         //// Code adapted from: https://stackoverflow.com/questions/7870533/c-triangle-rasterization
         for (int iter = 0; iter < 3; ++iter)
         {           
-            // Do NDC bound check.
-            int idx = (iter +1) % 3;
-            if (!inNDC[iter] || !inNDC[idx])
-                continue;
+            int idx = (iter + 1) % 3;
 
             // Get starting indices.
             int x1 = v[iter].position.x;
@@ -225,7 +222,7 @@ namespace SoftwareRasterizer
 
                 // Compare this depth value to current depth at this pixel in zbuffer.
                 float interpDepth = getZ(glm::vec2(j, minY + i));
-                if (!depthTest || rowZ[j][0] > interpDepth)
+                if (!depthTest || rowZ[j][2] > interpDepth)
                 {
                     // Set output frame's pixel color.
                     if (img.channels() == 3) {
@@ -233,7 +230,7 @@ namespace SoftwareRasterizer
                     }
                     // Set z-buffer depth values.
                     if (imgZ.channels() == 3) {
-                        rowZ[j] = cv::Vec3f(interpDepth, 0.0f, 0.0f);
+                        rowZ[j] = cv::Vec3f(0.0f,0.0f,interpDepth);
                     }
                 }
             }       

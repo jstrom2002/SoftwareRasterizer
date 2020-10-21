@@ -29,12 +29,14 @@ namespace SoftwareRasterizer
 		bool frontFaceCCW;
 		bool wireframeOn;
 		bool depthTest;
+		bool showRenderedTriangleCount;
 		char keyPressed;
 
 		Scene();
 		~Scene();
 		void AddModel(std::string filename);
 		void Draw();
+		unsigned int TotalTriangles();
 
 	private:
 		clock_t startFrameTime, endFrameTime;

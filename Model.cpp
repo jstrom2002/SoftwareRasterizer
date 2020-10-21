@@ -152,8 +152,9 @@ namespace SoftwareRasterizer
         std::cout << "# faces: " << m_Triangles.size() << std::endl;
     }
     
-    void Model::Draw(cv::Mat& img, cv::Mat& imgZ, glm::mat4 P, glm::mat4 V, int w, int h, 
-        int frameCount, bool wireframeOn, bool cullFace, bool frontFaceCCW, bool depthTest)
+    void Model::Draw(cv::Mat& img, cv::Mat& imgZ, glm::mat4 P, glm::mat4 V, 
+        int w, int h, int frameCount, bool wireframeOn, bool cullFace, bool frontFaceCCW, 
+        bool depthTest, unsigned int& trianglesRendered)
     {
             // Apply transforms.
             glm::mat4 M = glm::mat4(1);
@@ -169,9 +170,9 @@ namespace SoftwareRasterizer
                 // Transform to clip space by projection, dividing out z,w values to get (x,y) coord.
                 glm::vec3 v2[3] = 
                 {
-                    glm::vec3(MVP * glm::vec4(this->m_Triangles[i].v[0].position, 1.0f)),
-                    glm::vec3(MVP * glm::vec4(this->m_Triangles[i].v[1].position, 1.0f)),
-                    glm::vec3(MVP * glm::vec4(this->m_Triangles[i].v[2].position, 1.0f))
+                   glm::vec3(MVP * glm::vec4(this->m_Triangles[i].v[0].position, 1.0f)),
+                   glm::vec3(MVP * glm::vec4(this->m_Triangles[i].v[1].position, 1.0f)),
+                   glm::vec3(MVP * glm::vec4(this->m_Triangles[i].v[2].position, 1.0f))
                 };
 
                 // Normalize by homogenous coordinate to convert from clip space to screen space.
@@ -197,6 +198,8 @@ namespace SoftwareRasterizer
                         inNDC[i] = true;
                     }
                 }
+                if (!inNDC[0] && !inNDC[1] && !inNDC[2])
+                    continue;
 
                 // Make a copy of the triangle, now projected to clip space.
                 Triangle clipspaceTri = Triangle(
@@ -207,11 +210,9 @@ namespace SoftwareRasterizer
                 );
 
                 // Cull faces as necessary.
-                if (cullFace)
-                {
+                if (cullFace)                
                     if (clipspaceTri.isCCW() != frontFaceCCW)
-                        continue;
-                }
+                        continue;                
 
                 // Keep copy of NDC bounds check with clip space triangle for testing.
                 // Somewhat hacky, should be fixed.
@@ -225,17 +226,39 @@ namespace SoftwareRasterizer
                     clipspaceTri.v[q].position.y = int((clipspaceTri.v[q].position.y + 1.0) * 0.5 * h);
                 }
 
-                // Get diffuse color.
+                // If every point of triangle is at a depth greater than
+                // that of the current depths in the z-buffer, skip rendering
+                // because the triangle is occluded.
+                int vertexOccluded = 0;
+                if (depthTest)
+                {
+                    float minZ = clipspaceTri.getMinZ();
+                    for (int p = 0; p < 3; ++p)
+                    {
+                        if (clipspaceTri.v[p].position.x >= 0 && 
+                            clipspaceTri.v[p].position.x < imgZ.rows &&
+                            clipspaceTri.v[p].position.y >= 0 && 
+                            clipspaceTri.v[p].position.y < imgZ.cols)
+                        {
+                            // If vertex is occluded, increment occluded vertex counter.
+                            if (minZ > imgZ.at<cv::Vec3f>(clipspaceTri.v[p].position.x,
+                                clipspaceTri.v[p].position.y)[2])                            
+                                    vertexOccluded++;                            
+                        }
+                    }
+                }
+                if (vertexOccluded >= 3)
+                    continue;
+
+                // Get diffuse color. Remember that OpenCV requires conversion of values from
+                // BGR -> RGB.
                 Material* material = &this->m_Materials[this->m_Triangles[i].materialIndex];
                 glm::vec3 dif = material->diffuse * 255.f;
-                float col[3] = { material->diffuse.x, material->diffuse.y, material->diffuse.z };
-                cv::Scalar colcv = cv::Scalar(col[0], col[1], col[2]);
+                float col[3] = { material->diffuse.z, material->diffuse.y, material->diffuse.x };
 
-                // Draw filled triangle(s) as necessary.
-                if (1)
-                {
-                    clipspaceTri.Draw(img, imgZ, material, col, wireframeOn, depthTest);
-                }
+                // Draw rasterized triangle(s) as necessary.
+                clipspaceTri.Draw(img, imgZ, material, col, wireframeOn, depthTest);      
+                trianglesRendered++;
             }
     }
 
@@ -249,12 +272,12 @@ namespace SoftwareRasterizer
 
         while (true)
         {
+            char txpath[256];
             char buf[128];
             int res = fscanf(file, "%s", buf);
-            if (res == EOF)
-            {
+            if (res == EOF)            
                 break;
-            }
+            
             if (strcmp(buf, "newmtl") == 0)
             {
                 char str[80];
@@ -262,6 +285,8 @@ namespace SoftwareRasterizer
                 m_MaterialNames.push_back(str);
                 m_Materials.push_back(Material());
             }
+
+            // Handle loading material properties.
             else if (strcmp(buf, "Kd") == 0)
             {
                 fscanf(file, "%f %f %f\n", &m_Materials.back().diffuse.x, &m_Materials.back().diffuse.y, &m_Materials.back().diffuse.z);
@@ -269,6 +294,10 @@ namespace SoftwareRasterizer
             else if (strcmp(buf, "Ks") == 0)
             {
                 fscanf(file, "%f %f %f\n", &m_Materials.back().specular.x, &m_Materials.back().specular.y, &m_Materials.back().specular.z);
+            }
+            else if (strcmp(buf, "Ka") == 0)
+            {
+                fscanf(file, "%f %f %f\n", &m_Materials.back().ambient.x, &m_Materials.back().ambient.y, &m_Materials.back().ambient.z);
             }
             else if (strcmp(buf, "Ke") == 0)
             {
@@ -281,6 +310,75 @@ namespace SoftwareRasterizer
             else if (strcmp(buf, "Ni") == 0)
             {
                 fscanf(file, "%f\n", &m_Materials.back().ior);
+            }
+            else if (strcmp(buf, "d") == 0)
+            {
+                fscanf(file, "%f\n", &m_Materials.back().opacity);
+            }
+
+            // Handle loading light maps.
+            else if (strcmp(buf, "map_Kd") == 0)
+            {
+                fscanf(file, "%s\n", &txpath);
+                m_Materials.back().textures.push_back(MaterialTexture());
+                m_Materials.back().textures.back().loadTexture(
+                    txpath, TEXTURE_TYPE::DIFFUSE, m_Materials.size() - 1);
+            }
+            else if (strcmp(buf, "map_Ks") == 0)
+            {
+                fscanf(file, "%s\n", &txpath);
+                m_Materials.back().textures.push_back(MaterialTexture());
+                m_Materials.back().textures.back().loadTexture(
+                    txpath, TEXTURE_TYPE::SPECULAR, m_Materials.size() - 1);
+            }
+            else if (strcmp(buf, "map_Ka") == 0)
+            {
+                fscanf(file, "%s\n", &txpath);
+                m_Materials.back().textures.push_back(MaterialTexture());
+                m_Materials.back().textures.back().loadTexture(
+                    txpath, TEXTURE_TYPE::AMBIENT, m_Materials.size() - 1);
+            }
+            else if (strcmp(buf, "map_Ke") == 0)
+            {
+                fscanf(file, "%s\n", &txpath);
+                m_Materials.back().textures.push_back(MaterialTexture());
+                m_Materials.back().textures.back().loadTexture(
+                    txpath, TEXTURE_TYPE::EMISSIVE, m_Materials.size() - 1);
+            }
+            else if (strcmp(buf, "map_Kn") == 0)
+            {
+                fscanf(file, "%s\n", &txpath);
+                m_Materials.back().textures.push_back(MaterialTexture());
+                m_Materials.back().textures.back().loadTexture(
+                    txpath, TEXTURE_TYPE::NORMALS, m_Materials.size() - 1);
+            }
+            else if (strcmp(buf, "map_Ns") == 0)
+            {
+                fscanf(file, "%s\n", &txpath);
+                m_Materials.back().textures.push_back(MaterialTexture());
+                m_Materials.back().textures.back().loadTexture(
+                    txpath, TEXTURE_TYPE::SHININESS, m_Materials.size() - 1);
+            }
+            else if (strcmp(buf, "map_d") == 0)
+            {
+                fscanf(file, "%s\n", &txpath);
+                m_Materials.back().textures.push_back(MaterialTexture());
+                m_Materials.back().textures.back().loadTexture(
+                    txpath, TEXTURE_TYPE::OPACITY, m_Materials.size() - 1);
+            }
+            else if (strcmp(buf, "map_disp") == 0)
+            {
+                fscanf(file, "%s\n", &txpath);
+                m_Materials.back().textures.push_back(MaterialTexture());
+                m_Materials.back().textures.back().loadTexture(
+                    txpath, TEXTURE_TYPE::DISPLACEMENT, m_Materials.size() - 1);
+            }
+            else if (strcmp(buf, "refl") == 0)
+            {
+                fscanf(file, "%s\n", &txpath);
+                m_Materials.back().textures.push_back(MaterialTexture());
+                m_Materials.back().textures.back().loadTexture(
+                    txpath, TEXTURE_TYPE::REFLECTION, m_Materials.size() - 1);
             }
         }
     }
