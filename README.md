@@ -1,8 +1,6 @@
 # Software Rasterizer
 #### Minimal Software Rasterizer Using OpenCV.
 
-## This code is FOSS (Free and Open Source Software)
-
 ### Dependencies:
 GLM
 OpenCV
