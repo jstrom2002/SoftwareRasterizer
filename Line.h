@@ -1,6 +1,6 @@
 /*
 *	Line.h -- header for line drawing/traversal using various line rasterization algorithms.
-*	Line raster code adapted from: https://github.com/JesusHF/bresenham
+*	Line raster code adapted from: http://www.edepot.com/algorithm.html
 */
 
 #pragma once
