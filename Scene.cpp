@@ -76,9 +76,9 @@ namespace SoftwareRasterizer
             unsigned int trianglesRendered = 0;
             startFrameTime = clock();
             glm::mat4 V = camera.getViewMatrix();
+#pragma omp parallel for
             for (int i = 0; i < models.size(); ++i)            
-                models[i].Draw(frame, frameZ, P, V, w, h, frameCount, wireframeOn, 
-                    cullFace, frontFaceCCW, depthTest, trianglesRendered);
+                models[i].Draw(frame, frameZ, P, V, w, h, frameCount, wireframeOn, cullFace, frontFaceCCW, depthTest, trianglesRendered);
             endFrameTime = clock();
 
             // Draw text info if necessary.

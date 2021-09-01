@@ -165,6 +165,7 @@ namespace SoftwareRasterizer
             glm::mat4 MVP = P* V* M;
 
             // Iterate over triangles, project to screen space, rasterize lines.
+#pragma omp parallel for
             for (int i = 0; i < this->m_Triangles.size(); ++i)
             {
                 // Transform to clip space by projection, dividing out z,w values to get (x,y) coord.
